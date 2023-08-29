@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 // start Service.
-                startService(new Intent(getBaseContext(), StepCountingService.class));
+                startForegroundService(new Intent(getBaseContext(), StepCountingService.class));
                 // register our BroadcastReceiver by passing in an IntentFilter. * identifying the message that is broadcasted by using static string "BROADCAST_ACTION".
                 registerReceiver(broadcastReceiver, new IntentFilter(StepCountingService.BROADCAST_ACTION));
                 isServiceStopped = false;

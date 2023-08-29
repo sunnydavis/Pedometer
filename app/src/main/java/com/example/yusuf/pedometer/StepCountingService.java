@@ -4,6 +4,7 @@ package com.example.yusuf.pedometer;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.NotificationChannel;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
@@ -48,6 +49,9 @@ public class StepCountingService extends Service implements SensorEventListener 
     private final Handler handler = new Handler();
     // Declare and initialise counter - for keeping a record of how many times the service carried out updates.
     int counter = 0;
+
+    private static final int NOTIFICATION_ID = 2001;
+    private static final String CHANNEL_ID = "StepServiceChannel";
     // ___________________________________________________________________________ \\
 
     /**
@@ -81,8 +85,8 @@ public class StepCountingService extends Service implements SensorEventListener 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
         stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-        sensorManager.registerListener(this, stepCounterSensor, 0);
-        sensorManager.registerListener(this, stepDetectorSensor, 0);
+        sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
 
         //currentStepCount = 0;
         currentStepsDetected = 0;
@@ -175,7 +179,11 @@ public class StepCountingService extends Service implements SensorEventListener 
     // --------------------------------------------------------------------------- \\
     // _ Manage notification. _
     private void showNotification() {
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this);
+        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, "Pedometer Notification", NotificationManager.IMPORTANCE_LOW);
+        notificationManager.createNotificationChannel(mChannel);
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID);
         notificationBuilder.setContentTitle("Pedometer");
         notificationBuilder.setContentText("Pedometer session is running in the background.");
         notificationBuilder.setSmallIcon(R.mipmap.sneaker);
@@ -183,17 +191,16 @@ public class StepCountingService extends Service implements SensorEventListener 
         int colorLED = Color.argb(255, 0, 255, 0);
         notificationBuilder.setLights(colorLED, 500, 500);
         // To  make sure that the Notification LED is triggered.
-        notificationBuilder.setPriority(Notification.PRIORITY_HIGH);
+        notificationBuilder.setPriority(NotificationManager.IMPORTANCE_HIGH);
         notificationBuilder.setOngoing(true);
 
         //Intent resultIntent = new Intent(this, MainActivity.class);
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(this,0,new Intent(),0);
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(this,0, new Intent(), PendingIntent.FLAG_IMMUTABLE);
         notificationBuilder.setContentIntent(resultPendingIntent);
 
-        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-
-        notificationManager.notify(0, notificationBuilder.build());
+        Notification notification = notificationBuilder.build();
+        startForeground(NOTIFICATION_ID, notification);
+        notificationManager.notify(NOTIFICATION_ID, notification);
 
     }
 
@@ -205,7 +212,7 @@ public class StepCountingService extends Service implements SensorEventListener 
 
     // --------------------------------------------------------------------------- \\
     // ___ (4) repeating timer ___ \\
-    private Runnable updateBroadcastData = new Runnable() {
+    private final Runnable updateBroadcastData = new Runnable() {
         public void run() {
             if (!serviceStopped) { // Only allow the repeating timer while service is running (once service is stopped the flag state will change and the code inside the conditional statement here will not execute).
                 // Call the method that broadcasts the data to the Activity..
