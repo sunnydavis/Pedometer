@@ -12,14 +12,13 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.AsyncTask;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.support.v7.app.NotificationCompat;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.util.Log;
 
-import java.util.Date;
+import androidx.core.app.NotificationCompat;
 
 // _________ Extend Service class & implement Service lifecycle callback methods. _________ //
 public class StepCountingService extends Service implements SensorEventListener {
@@ -51,7 +50,10 @@ public class StepCountingService extends Service implements SensorEventListener 
     int counter = 0;
     // ___________________________________________________________________________ \\
 
-
+    /**
+     * The Wake lock.
+     */
+    private WakeLock wakeLock;
 
     /** Called when the service is being created. */
     @Override
@@ -63,6 +65,10 @@ public class StepCountingService extends Service implements SensorEventListener 
         // Instantiate the intent declared globally, and pass "BROADCAST_ACTION" to the constructor of the intent.
         intent = new Intent(BROADCAST_ACTION);
         // ___________________________________________________________________________ \\
+
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG + "::MyWakelockTag");
+        wakeLock.acquire();
     }
 
     /** The service is starting, due to a call to startService() */
@@ -111,6 +117,10 @@ public class StepCountingService extends Service implements SensorEventListener 
         Log.v("Service", "Stop");
 
         serviceStopped = true;
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
 
         dismissNotification();
     }
